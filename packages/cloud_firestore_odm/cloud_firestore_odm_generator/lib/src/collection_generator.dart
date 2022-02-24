@@ -214,9 +214,8 @@ class CollectionGenerator extends ParserGenerator<void, Data, Collection> {
 
     final type = (object.type! as ParameterizedType).typeArguments.first;
 
-    final jsonSerializable = const TypeChecker.fromRuntime(JsonSerializable)
-        .firstAnnotationOf(type.element!);
-    final hasJsonSerializable = jsonSerializable != null;
+    final hasJsonSerializable = const TypeChecker.fromRuntime(JsonSerializable)
+        .hasAnnotationOf(type.element!);
 
     if (type.isDynamic) {
       throw InvalidGenerationSourceError(
