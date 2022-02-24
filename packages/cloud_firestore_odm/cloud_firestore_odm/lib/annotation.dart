@@ -112,3 +112,42 @@ class Collection<T> {
 
   final String? name;
 }
+
+/// Inject a value from Firestore in the annotated field or property.
+///
+/// Add this annotation to mutable fields or setters of types that
+/// are part of a [Collection].
+///
+/// See [FirestoreValue] for the types of values that can be injected.
+///
+/// ```dart
+/// @Inject(FirestoreField.id)
+/// String? _id;
+/// String? get id => _id;
+/// ```
+class Inject {
+  const Inject(this.type);
+
+  final FirestoreValue type;
+}
+
+/// Types of values that can be injected using [Inject].
+enum FirestoreValue {
+  /// Injects the document's id.
+  ///
+  /// Expects a field of type String or String?.
+  id,
+
+  /// Injects the path to the document.
+  ///
+  /// Expects a field of type String or String?.
+  path,
+
+  /// Injects the id of the parent document if the document is in a
+  /// subcollection.
+  ///
+  /// Expects a field of type String or String?.
+  /// Use the nullable version if you also use the containing type
+  /// in root collections, otherwise the injection will throw.
+  parentId,
+}

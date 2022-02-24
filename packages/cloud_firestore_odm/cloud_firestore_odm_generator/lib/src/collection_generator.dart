@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:build/build.dart';
 import 'package:cloud_firestore_odm/annotation.dart';
@@ -26,6 +27,7 @@ class CollectionData {
     required this.queryableFields,
     required this.fromJson,
     required this.toJson,
+    required this.injections,
   }) : collectionName =
             collectionName ?? ReCase(path.split('/').last).camelCase;
 
@@ -62,10 +64,24 @@ class CollectionData {
   String Function(String json) fromJson;
   String Function(String value) toJson;
 
+  final List<FieldInjection> injections;
+
   @override
   String toString() {
     return 'CollectionData(type: $type, collectionName: $collectionName, path: $path)';
   }
+}
+
+class FieldInjection {
+  const FieldInjection({
+    required this.type,
+    required this.name,
+    required this.nullable,
+  });
+
+  final FirestoreValue type;
+  final String name;
+  final bool nullable;
 }
 
 class Data {
@@ -274,6 +290,60 @@ class CollectionGenerator extends ParserGenerator<void, Data, Collection> {
       }
     }
 
+    const injectTs = TypeChecker.fromRuntime(Inject);
+    final injections = <FieldInjection>[];
+
+    final setters = collectionTargetElement.accessors;
+    final fields = collectionTargetElement.fields;
+    for (final f in [...setters, ...fields]) {
+      final annotations = injectTs.annotationsOf(f);
+
+      if (annotations.isEmpty) continue;
+      if (annotations.length > 1) {
+        throw InvalidGenerationSourceError(
+          'Only one @Inject annotation may be used for each field.',
+          element: f,
+        );
+      }
+
+      if ((f is PropertyAccessorElement && !f.isSetter) ||
+          (f is FieldElement && f.isFinal)) {
+        throw InvalidGenerationSourceError(
+          '@Inject fields or properties must be settable.',
+          element: f,
+        );
+      }
+
+      final annotation = annotations.first;
+      final annotationType = _parseInjectAnnotationType(annotation);
+
+      DartType? type;
+      if (f is PropertyAccessorElement) {
+        type = f.parameters[0].type;
+      } else if (f is FieldElement) {
+        type = f.type;
+      }
+
+      if (type == null || !type.isDartCoreString) {
+        throw InvalidGenerationSourceError(
+          'Fields with @Inject must be of type String.',
+          element: f,
+        );
+      }
+
+      // Names of setters have '=' appended.
+      final name = f is PropertyAccessorElement
+          ? f.name.substring(0, f.name.length - 1)
+          : f.name!;
+
+      final injection = FieldInjection(
+        type: annotationType,
+        name: name,
+        nullable: type.nullabilitySuffix != NullabilitySuffix.none,
+      );
+      injections.add(injection);
+    }
+
     return CollectionData(
       type: type,
       path: path,
@@ -288,6 +358,7 @@ class CollectionGenerator extends ParserGenerator<void, Data, Collection> {
       },
       queryableFields: collectionTargetElement.fields
           .where((f) => f.isPublic)
+          .whereNot((f) => injections.any((inj) => inj.name == f.name))
           .where(
             (f) =>
                 f.type.isDartCoreString ||
@@ -299,7 +370,13 @@ class CollectionGenerator extends ParserGenerator<void, Data, Collection> {
             // TODO filter list other than LIst<string|bool|num>
           )
           .toList(),
+      injections: injections,
     );
+  }
+
+  FirestoreValue _parseInjectAnnotationType(DartObject annotation) {
+    return FirestoreValue
+        .values[annotation.getField('type')!.getField('index')!.toIntValue()!];
   }
 
   @override
