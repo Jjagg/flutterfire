@@ -1,3 +1,5 @@
+import 'package:cloud_firestore_odm/annotation.dart';
+
 import '../collection_generator.dart';
 import 'template.dart';
 
@@ -18,9 +20,11 @@ abstract class ${data.collectionReferenceInterfaceName}
     DocumentSnapshot<Map<String, Object?>> snapshot,
     SnapshotOptions? options,
   ) {
-    return ${data.fromJson('snapshot.data()!')};
+    final data = ${data.fromJson('snapshot.data()!')};
+    ${_inject(data.injections)}
+    return data;
   }
- 
+
   static Map<String, Object?> toFirestore(
     ${data.type} value,
     SetOptions? options,
@@ -178,5 +182,28 @@ factory ${data.collectionReferenceInterfaceName}([
     CollectionReference<${data.type}> reference,
   ) : super(reference, reference);
 ''';
+  }
+
+  String _inject(List<FieldInjection> injections) {
+    final buffer = StringBuffer();
+    for (final injection in injections) {
+      switch (injection.type) {
+        case FirestoreValue.id:
+          buffer.writeln('data.${injection.name} = snapshot.id;');
+          break;
+        case FirestoreValue.path:
+          buffer.writeln(
+            'data.${injection.name} = snapshot.reference.path;',
+          );
+          break;
+        case FirestoreValue.parentId:
+          buffer.writeln(
+            "data.${injection.name} = snapshot.reference.parent.parent${injection.nullable ? '?' : '!'}.id;",
+          );
+          break;
+      }
+    }
+
+    return buffer.toString();
   }
 }
