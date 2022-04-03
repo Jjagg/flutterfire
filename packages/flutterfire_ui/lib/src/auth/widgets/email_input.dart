@@ -32,12 +32,11 @@ class EmailInput extends StatelessWidget {
       controller: controller,
       placeholder: l.emailInputLabel,
       keyboardType: TextInputType.emailAddress,
-      autocorrect: false,
       validator: Validator.validateAll([
         NotEmpty(l.emailIsRequiredErrorText),
         EmailValidator(l.isNotAValidEmailErrorText),
       ]),
-      onSubmitted: (v) => onSubmitted(v!),
+      onSubmitted: (v) => onSubmitted(v!.trim()),
     );
   }
 }
