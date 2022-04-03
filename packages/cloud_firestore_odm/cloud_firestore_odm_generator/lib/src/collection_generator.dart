@@ -290,13 +290,13 @@ class CollectionGenerator extends ParserGenerator<void, Data, Collection> {
       }
     }
 
-    const injectTs = TypeChecker.fromRuntime(Inject);
     final injections = <FieldInjection>[];
 
     final setters = collectionTargetElement.accessors;
     final fields = collectionTargetElement.fields;
     for (final f in [...setters, ...fields]) {
-      final annotations = injectTs.annotationsOf(f);
+      final annotations =
+          const TypeChecker.fromRuntime(Inject).annotationsOf(f);
 
       if (annotations.isEmpty) continue;
       if (annotations.length > 1) {

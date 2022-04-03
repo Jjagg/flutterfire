@@ -127,7 +127,6 @@ class Collection<T> {
 /// ```
 class Inject {
   const Inject(this.type);
-
   final FirestoreValue type;
 }
 
