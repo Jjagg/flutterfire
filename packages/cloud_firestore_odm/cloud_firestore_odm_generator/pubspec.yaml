@@ -12,7 +12,11 @@ dependencies:
   build: ^2.0.1
   build_config: ^1.0.0
   cloud_firestore_odm: #^1.0.0-dev.13
-    path: ../cloud_firestore_odm
+    #path: ../cloud_firestore_odm
+    git:
+      url: git@github.com:Jjagg/flutterfire.git
+      ref: matjes-club
+      path: packages/cloud_firestore_odm/cloud_firestore_odm
   collection: ^1.15.0
   json_annotation: ^4.0.0
   meta: ^1.3.0
